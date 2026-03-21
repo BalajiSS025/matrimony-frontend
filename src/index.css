@@ -10,6 +10,57 @@
   }
 }
 
+/* ── Indian Wedding Decorative Elements ──────────────────────────────────── */
+
+/* Paisley / mandap border pattern on top of main nav area */
+.wedding-border-top {
+  position: relative;
+}
+.wedding-border-top::before {
+  content: '';
+  display: block;
+  height: 4px;
+  background: linear-gradient(
+    90deg,
+    #8f2c2c 0%,
+    #c08b10 25%,
+    #8f2c2c 50%,
+    #c08b10 75%,
+    #8f2c2c 100%
+  );
+  background-size: 60px 4px;
+}
+
+/* Ornamental divider — use on section headings */
+.mandap-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: #c08b10;
+}
+.mandap-divider::before,
+.mandap-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #c08b10 40%, #c08b10 60%, transparent);
+}
+
+/* Gold shimmer on card hover */
+.card-wedding:hover {
+  box-shadow: 0 8px 32px -4px rgba(143, 44, 44, 0.12), 0 0 0 1px rgba(192, 139, 16, 0.15);
+}
+
+/* Lotus / medallion badge background pattern */
+.lotus-bg {
+  background-image: radial-gradient(circle at 50% 50%, rgba(192, 139, 16, 0.08) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* Scrollbar hide utility */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
 html.dark body {
   @apply bg-gray-900 text-gray-100;
 }

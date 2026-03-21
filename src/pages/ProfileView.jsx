@@ -3,12 +3,15 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { userService } from '../services/userService';
 import { interestService } from '../services/interestService';
 import { likeService } from '../services/likeService';
+import { reportService } from '../services/reportService';
+import { REPORT_REASONS } from '../utils/constants';
 import {
   ArrowLeft, MapPin, Briefcase, GraduationCap,
   Heart, CheckCircle2, User, Users, ShieldBan,
   Image as ImageIcon, Wallet, BookOpen, Calendar,
   Ruler, Globe, Star, Home, AlertCircle, Phone,
-  Mail, Info, ZoomIn, Sparkles, FileText, Check, X
+  Mail, Info, ZoomIn, Sparkles, FileText, Check, X,
+  MessageCircle, ShieldCheck, Flag, Shield
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { calculateAge, formatDate } from '../utils/dateUtils';
@@ -114,6 +117,16 @@ const ProfileView = () => {
   const [interaction, setInteraction] = useState(null);
   const [isLiked, setIsLiked] = useState(false);
   const [likeLoading, setLikeLoading] = useState(false);
+
+  // Kundali score
+  const [kundaliScore, setKundaliScore] = useState(null);
+  const [kundaliLoading, setKundaliLoading] = useState(false);
+
+  // Report modal
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportReason, setReportReason] = useState('');
+  const [reportDetails, setReportDetails] = useState('');
+  const [reportLoading, setReportLoading] = useState(false);
 
   // Photo modal state
   const [modalOpen, setModalOpen] = useState(false);
@@ -240,6 +253,39 @@ const ProfileView = () => {
     setModalOpen(true);
   };
 
+  // Fetch kundali score once profile is loaded
+  useEffect(() => {
+    if (!profile?.nakshatram || !id) return;
+    const fetchKundali = async () => {
+      setKundaliLoading(true);
+      try {
+        const result = await userService.getKundaliScore(id);
+        setKundaliScore(result);
+      } catch {
+        // Silently fail — kundali is optional
+      } finally {
+        setKundaliLoading(false);
+      }
+    };
+    fetchKundali();
+  }, [profile?.nakshatram, id]);
+
+  const handleReport = async () => {
+    if (!reportReason) { toast.error('Please select a reason'); return; }
+    setReportLoading(true);
+    try {
+      await reportService.createReport({ reportedUserId: id, reason: reportReason, details: reportDetails });
+      toast.success('Report submitted. Our team will review it.');
+      setReportOpen(false);
+      setReportReason('');
+      setReportDetails('');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to submit report');
+    } finally {
+      setReportLoading(false);
+    }
+  };
+
   if (loading) return <LoadingSkeleton />;
   if (error || !profile) return <ErrorState />;
 
@@ -258,6 +304,8 @@ const ProfileView = () => {
   const maritalStatus =
     profile.maritalStatus ||
     (profile.divorcee === true ? 'Divorced' : profile.divorcee === false ? 'Never Married' : null);
+
+  const isMutualMatch = interaction?.status === 'accepted';
 
   // ── Action buttons ─────────────────────────────────────────────────────────
   const ActionButtons = ({ fullWidth = false }) => (
@@ -296,6 +344,16 @@ const ProfileView = () => {
               {actionLoading ? 'Sending…' : 'Send Interest'}
           </button>
       )}
+      {/* Chat button — only when mutually matched */}
+      {isMutualMatch && (
+        <Link
+          to={`/chat/${id}`}
+          className={`${fullWidth ? 'w-auto' : 'w-full'} flex items-center justify-center gap-2 font-semibold py-3 px-4 rounded-xl border border-primary-200 bg-primary-50 text-primary-700 hover:bg-primary-100 transition-all text-sm`}
+        >
+          <MessageCircle className="w-4 h-4" />
+          <span>Chat</span>
+        </Link>
+      )}
       <button
         onClick={handleBlockUser}
         disabled={actionLoading}
@@ -304,11 +362,64 @@ const ProfileView = () => {
         <ShieldBan className="w-4 h-4" />
         <span className={`${fullWidth ? 'hidden sm:inline' : 'inline'}`}>Block</span>
       </button>
+      <button
+        onClick={() => setReportOpen(true)}
+        className={`${fullWidth ? 'w-auto' : 'w-full'} flex items-center justify-center gap-2 font-semibold py-3 px-4 rounded-xl border border-gray-200 bg-white text-gray-500 hover:border-orange-400 hover:text-orange-600 hover:bg-orange-50 transition-all text-sm`}
+      >
+        <Flag className="w-4 h-4" />
+        <span className={`${fullWidth ? 'hidden sm:inline' : 'inline'}`}>Report</span>
+      </button>
     </div>
   );
 
   return (
     <div className="bg-gray-50 min-h-screen pb-24 md:pb-8">
+
+      {/* ── Report Modal ──────────────────────────────────────── */}
+      {reportOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                <Flag className="w-5 h-5 text-orange-500" />
+                Report Profile
+              </h3>
+              <button onClick={() => setReportOpen(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-sm text-gray-500 mb-4">Select a reason for reporting this profile. Our team will review it within 48 hours.</p>
+            <select
+              value={reportReason}
+              onChange={e => setReportReason(e.target.value)}
+              className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-primary-400 mb-3"
+            >
+              <option value="">Select reason...</option>
+              {REPORT_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
+            </select>
+            <textarea
+              value={reportDetails}
+              onChange={e => setReportDetails(e.target.value)}
+              placeholder="Additional details (optional)..."
+              rows={3}
+              maxLength={500}
+              className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-primary-400 resize-none mb-4"
+            />
+            <div className="flex gap-3">
+              <button onClick={() => setReportOpen(false)} className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50">
+                Cancel
+              </button>
+              <button
+                onClick={handleReport}
+                disabled={!reportReason || reportLoading}
+                className="flex-1 py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-sm font-bold disabled:opacity-50 transition-colors"
+              >
+                {reportLoading ? 'Submitting...' : 'Submit Report'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Photo Modal */}
       <PhotoModal
@@ -360,9 +471,9 @@ const ProfileView = () => {
                   <ZoomIn className="w-3 h-3" />
                   Enlarge
                 </div>
-                {profile.verified && (
-                  <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm flex items-center gap-1 text-xs font-bold text-green-700 px-2 py-0.5 rounded-full shadow">
-                    <CheckCircle2 className="w-3.5 h-3.5" />
+                {profile.verificationBadge && (
+                  <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm flex items-center gap-1 text-xs font-bold text-blue-700 px-2 py-0.5 rounded-full shadow">
+                    <Shield className="w-3.5 h-3.5 text-blue-600" />
                     Verified
                   </div>
                 )}
@@ -378,9 +489,17 @@ const ProfileView = () => {
 
               {/* Name + chips */}
               <div className="p-5">
-                <h1 className="text-xl sm:text-2xl font-serif font-bold text-gray-900 mb-1">
-                  {safeField(profile.name, 'Unknown User')}
-                </h1>
+                <div className="flex items-center gap-2 mb-1">
+                  <h1 className="text-xl sm:text-2xl font-serif font-bold text-gray-900">
+                    {safeField(profile.name, 'Unknown User')}
+                  </h1>
+                  {profile.verificationBadge && (
+                    <div title="Verified Profile" className="flex items-center gap-1 bg-blue-50 text-blue-700 text-xs font-bold px-2 py-0.5 rounded-full border border-blue-200 flex-shrink-0">
+                      <Shield className="w-3 h-3" />
+                      Verified
+                    </div>
+                  )}
+                </div>
                 <p className="text-gray-500 text-sm mb-4">
                   {[ageText, profile.location].filter(Boolean).join(' · ')}
                 </p>
@@ -506,6 +625,86 @@ const ProfileView = () => {
                     View / Download
                   </a>
                 </div>
+              </Section>
+            )}
+
+            {/* ── Kundali Matching Score ──────────────────────── */}
+            {(profile.nakshatram || kundaliLoading) && (
+              <Section title="Kundali Compatibility" icon={Star}>
+                {kundaliLoading ? (
+                  <div className="flex items-center gap-3 py-4">
+                    <div className="w-5 h-5 border-2 border-primary-400 border-t-transparent rounded-full animate-spin" />
+                    <span className="text-sm text-gray-500">Calculating compatibility...</span>
+                  </div>
+                ) : kundaliScore?.error ? (
+                  <p className="text-sm text-gray-400 py-2">
+                    {kundaliScore.error} — both profiles need Rasi and Nakshatram filled in.
+                  </p>
+                ) : kundaliScore ? (
+                  <div>
+                    {/* Score header */}
+                    <div className="flex items-center gap-4 mb-5 p-4 bg-gray-50 rounded-2xl">
+                      <div className="text-center">
+                        <div className={`text-3xl font-bold ${
+                          kundaliScore.percentage >= 70 ? 'text-green-600' :
+                          kundaliScore.percentage >= 50 ? 'text-yellow-600' : 'text-red-600'
+                        }`}>
+                          {kundaliScore.score}/{kundaliScore.maxScore}
+                        </div>
+                        <div className="text-xs text-gray-400 mt-0.5">Points</div>
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-sm font-semibold text-gray-700">Compatibility</span>
+                          <span className={`text-sm font-bold ${
+                            kundaliScore.percentage >= 70 ? 'text-green-600' :
+                            kundaliScore.percentage >= 50 ? 'text-yellow-600' : 'text-red-600'
+                          }`}>{kundaliScore.percentage}%</span>
+                        </div>
+                        <div className="h-2.5 bg-gray-200 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all duration-700 ${
+                              kundaliScore.percentage >= 70 ? 'bg-green-500' :
+                              kundaliScore.percentage >= 50 ? 'bg-yellow-500' : 'bg-red-500'
+                            }`}
+                            style={{ width: `${kundaliScore.percentage}%` }}
+                          />
+                        </div>
+                        <p className="text-xs text-gray-400 mt-1">
+                          {!kundaliScore.rajjuMatch && (
+                            <span className="text-red-500 font-medium">⚠ Rajju mismatch — consult a jyotishar. </span>
+                          )}
+                          {kundaliScore.compatible
+                            ? 'Good compatibility for marriage.'
+                            : 'Compatibility is low — please consult a jyotishar.'}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Porutham grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {kundaliScore.poruthams?.map(p => (
+                        <div key={p.name} className={`flex items-center justify-between px-3 py-2 rounded-xl border text-sm ${
+                          p.matched ? 'bg-green-50 border-green-100' : 'bg-red-50 border-red-100'
+                        }`}>
+                          <div>
+                            <span className={`font-medium ${p.matched ? 'text-green-800' : 'text-red-800'}`}>{p.name}</span>
+                            <p className="text-xs text-gray-400">{p.description}</p>
+                          </div>
+                          <div className={`text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0 ml-2 ${
+                            p.matched ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'
+                          }`}>
+                            {p.score}/{p.max}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <p className="text-xs text-gray-400 mt-3 text-center">
+                      Based on {kundaliScore.myNakshatram} × {kundaliScore.theirNakshatram} — 10 Porutham analysis
+                    </p>
+                  </div>
+                ) : null}
               </Section>
             )}
 

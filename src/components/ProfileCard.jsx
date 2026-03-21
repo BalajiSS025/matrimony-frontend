@@ -253,22 +253,9 @@ const ProfileCard = ({ profile, onRemove, interaction, onInteractionChange, isLi
                     </Link>
 
                     {/* Interaction Buttons Logic */}
-                    {interaction?.status === 'accepted' ? (
-                        <button disabled className="flex-1 flex flex-row items-center justify-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-xl bg-green-50 text-green-700 border border-green-200 cursor-not-allowed">
-                            <Heart className="w-4 h-4 fill-green-600" />
-                            Accepted
-                        </button>
-                    ) : interaction?.status === 'rejected' ? (
-                        <button disabled className="flex-1 flex flex-row items-center justify-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-xl bg-red-50 text-red-700 border border-red-200 cursor-not-allowed">
-                            <X className="w-4 h-4 text-red-600" />
-                            Rejected
-                        </button>
-                    ) : (interaction?.type === 'sent' && interaction?.status === 'pending') || interestSent ? (
-                        <button disabled className="flex-1 flex flex-row items-center justify-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-xl bg-yellow-50 text-yellow-700 border border-yellow-200 cursor-not-allowed">
-                            <Heart className="w-4 h-4 fill-yellow-600" />
-                            Pending
-                        </button>
-                    ) : interaction?.type === 'received' && interaction?.status === 'pending' ? (
+                    {interaction?.status === 'accepted' || interaction?.status === 'rejected' ||
+                     (interaction?.type === 'sent' && interaction?.status === 'pending') || interestSent ? null
+                    : interaction?.type === 'received' && interaction?.status === 'pending' ? (
                         <div className="flex-1 flex gap-2">
                             <button
                                 onClick={handleAcceptInterest}

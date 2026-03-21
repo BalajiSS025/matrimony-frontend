@@ -1,19 +1,28 @@
 import api from './api';
 
 export const notificationService = {
-    // GET /api/notifications
     getNotifications: async () => {
         const response = await api.get('/notifications');
         return response.data;
     },
-    // PATCH /api/notifications/read/:id
-    markAsRead: async (id) => {
-        const response = await api.patch(`/notifications/read/${id}`);
+
+    getUnreadCount: async () => {
+        const response = await api.get('/notifications/unread-count');
         return response.data;
     },
-    // PATCH /api/notifications/read-all
+
+    markAsRead: async (id) => {
+        const response = await api.patch(`/notifications/${id}/read`);
+        return response.data;
+    },
+
     markAllAsRead: async () => {
         const response = await api.patch('/notifications/read-all');
+        return response.data;
+    },
+
+    deleteNotification: async (id) => {
+        const response = await api.delete(`/notifications/${id}`);
         return response.data;
     },
 };

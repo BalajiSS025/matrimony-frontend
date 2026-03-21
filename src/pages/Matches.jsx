@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { interestService } from '../services/interestService';
 import toast from 'react-hot-toast';
-import { HeartHandshake } from 'lucide-react';
+import { HeartHandshake, MessageCircle } from 'lucide-react';
 import ProfileCard from '../components/ProfileCard';
 
 const Matches = () => {
@@ -69,6 +70,20 @@ const Matches = () => {
             </span>
           </div>
 
+          {/* Chat shortcut banner */}
+          {matches.length > 0 && (
+            <div className="mb-5 bg-primary-50 border border-primary-100 rounded-2xl px-5 py-4 flex items-center gap-3">
+              <MessageCircle className="w-5 h-5 text-primary-600 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm text-primary-800 font-medium">You can now chat with your mutual matches!</p>
+                <p className="text-xs text-primary-500">Open any profile or go to Messages to start chatting.</p>
+              </div>
+              <Link to="/chat" className="flex-shrink-0 bg-primary-600 hover:bg-primary-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition-colors">
+                Open Chat
+              </Link>
+            </div>
+          )}
+
           {loading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               {[1, 2, 3, 4, 5, 6].map(i => (
@@ -96,11 +111,19 @@ const Matches = () => {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
               {matches.map(match => (
-                <ProfileCard
-                  key={match._id}
-                  profile={match}
-                  onRemove={handleRemoveProfile}
-                />
+                <div key={match._id} className="relative">
+                  <ProfileCard
+                    profile={match}
+                    onRemove={handleRemoveProfile}
+                  />
+                  <Link
+                    to={`/chat/${match._id}`}
+                    className="absolute bottom-4 right-4 flex items-center gap-1.5 bg-primary-600 hover:bg-primary-700 text-white text-xs font-bold px-3 py-1.5 rounded-full transition-colors shadow"
+                  >
+                    <MessageCircle className="w-3.5 h-3.5" />
+                    Chat
+                  </Link>
+                </div>
               ))}
             </div>
           )}

@@ -18,6 +18,8 @@ import ProfileView from '../pages/ProfileView';
 import Interests from '../pages/Interests';
 import BlockedUsers from '../pages/BlockedUsers';
 import Settings from '../pages/Settings';
+import Chat from '../pages/Chat';
+import ProfileViewers from '../pages/ProfileViewers';
 
 // Admin Pages
 import AdminDashboard from '../pages/admin/AdminDashboard';
@@ -49,6 +51,9 @@ const AppRoutes = () => {
                 <Route path="/interests/received" element={<Interests />} />
                 <Route path="/settings/blocked-users" element={<BlockedUsers />} />
                 <Route path="/settings" element={<Settings />} />
+                <Route path="/chat" element={<Chat />} />
+                <Route path="/chat/:userId" element={<Chat />} />
+                <Route path="/profile-viewers" element={<ProfileViewers />} />
 
                 {/* Admin Routes */}
                 <Route path="/admin/dashboard" element={<AdminDashboard />} />

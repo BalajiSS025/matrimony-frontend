@@ -54,9 +54,27 @@ export const userService = {
         const response = await api.get('/users/blocked');
         return response.data;
     },
-    // PATCH /api/users/unblock/:userId
     unblockUser: async (userId) => {
         const response = await api.patch(`/users/unblock/${userId}`);
+        return response.data;
+    },
+
+    getNewThisWeek: async () => {
+        const response = await api.get('/users/browse?newThisWeek=true&limit=30');
+        return response.data;
+    },
+    getKundaliScore: async (userId) => {
+        const response = await api.get(`/users/kundali/${userId}`);
+        return response.data;
+    },
+
+    getProfileViewers: async () => {
+        const response = await api.get('/users/viewers');
+        return response.data;
+    },
+
+    reportUser: async ({ reportedUserId, reason, details }) => {
+        const response = await api.post('/reports', { reportedUserId, reason, details });
         return response.data;
     },
 };

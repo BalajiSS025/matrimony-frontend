@@ -1,8 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { dashboardService } from '../services/dashboardService';
-import { UserCircle, Search, ShieldAlert, Award, Heart, MailCheck, Clock } from 'lucide-react';
+import { userService } from '../services/userService';
+import { UserCircle, Search, ShieldAlert, Award, Heart, MailCheck, Clock, Sparkles, Image, AlignJustify, ChevronLeft, ChevronRight } from 'lucide-react';
+
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -13,9 +16,13 @@ const Dashboard = () => {
     profileCompletion: 0
   });
   const [loading, setLoading] = useState(true);
+  const [newUsers, setNewUsers] = useState([]);
+  const [showPhotos, setShowPhotos] = useState(true);
+  const scrollRef = useRef(null);
 
   useEffect(() => {
     fetchStats();
+    fetchNewUsers();
   }, []);
 
   const fetchStats = async () => {
@@ -28,6 +35,18 @@ const Dashboard = () => {
       setLoading(false);
     }
   };
+
+  const fetchNewUsers = async () => {
+    try {
+      const data = await userService.getNewThisWeek();
+      setNewUsers(data.users || []);
+    } catch (error) {
+      console.error("Error fetching new users:", error);
+    }
+  };
+
+  const scrollLeft = () => scrollRef.current?.scrollBy({ left: -240, behavior: 'smooth' });
+  const scrollRight = () => scrollRef.current?.scrollBy({ left: 240, behavior: 'smooth' });
 
   const completionPercentage = stats.profileCompletion || 0;
 
@@ -50,11 +69,23 @@ const Dashboard = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
       {/* Header */}
-      <div className="mb-6 sm:mb-10">
-        <h1 className="text-2xl sm:text-3xl font-serif font-bold text-gray-900">
-          Welcome back, {user?.name?.split(' ')[0] || 'User'}! 👋
-        </h1>
-        <p className="text-gray-500 mt-1 text-sm sm:text-base">Here is what's happening with your profile today.</p>
+      <div className="mb-6 sm:mb-10 relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary-700 via-primary-600 to-secondary-600 px-6 py-7 sm:px-10 sm:py-9 lotus-bg shadow-premium">
+        {/* Decorative rings */}
+        <div className="absolute -top-8 -right-8 w-40 h-40 rounded-full border-2 border-white/10 pointer-events-none" />
+        <div className="absolute -top-4 -right-4 w-24 h-24 rounded-full border border-white/10 pointer-events-none" />
+        <div className="absolute -bottom-6 -left-6 w-28 h-28 rounded-full border border-white/10 pointer-events-none" />
+
+        <div className="relative z-10">
+          <p className="text-secondary-300 text-xs sm:text-sm font-semibold tracking-widest uppercase mb-1">
+            ✦ Shubh Vivah ✦
+          </p>
+          <h1 className="text-2xl sm:text-3xl font-serif font-bold text-white leading-snug">
+            Welcome back, {user?.name?.split(' ')[0] || 'User'}!
+          </h1>
+          <p className="text-primary-200 mt-1.5 text-sm sm:text-base">
+            Here is what's happening with your profile today.
+          </p>
+        </div>
       </div>
 
       {/* Stats Grid — 2 cols on mobile, 4 on desktop */}
@@ -99,6 +130,124 @@ const Dashboard = () => {
           </div>
         </Link>
       </div>
+
+      {/* New Profiles This Week */}
+      {newUsers.length > 0 && (
+        <div className="mb-6 sm:mb-8 bg-white rounded-2xl shadow-soft border border-secondary-100 p-5 sm:p-6 relative overflow-hidden">
+          {/* Decorative corner */}
+          <div className="absolute top-0 right-0 w-24 h-24 opacity-5 pointer-events-none">
+            <Sparkles className="w-full h-full text-secondary-500" />
+          </div>
+
+          {/* Section header */}
+          <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-secondary-500 flex-shrink-0" />
+              <h3 className="text-base sm:text-lg font-bold text-gray-800 font-serif">New Profiles This Week</h3>
+              <span className="text-xs font-bold bg-secondary-100 text-secondary-700 px-2 py-0.5 rounded-full border border-secondary-200">
+                {newUsers.length}
+              </span>
+            </div>
+
+            {/* Photo toggle */}
+            <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-1">
+              <button
+                onClick={() => setShowPhotos(true)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  showPhotos ? 'bg-white shadow-sm text-primary-700' : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <Image className="w-3.5 h-3.5" /> Photos
+              </button>
+              <button
+                onClick={() => setShowPhotos(false)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  !showPhotos ? 'bg-white shadow-sm text-primary-700' : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <AlignJustify className="w-3.5 h-3.5" /> List
+              </button>
+            </div>
+          </div>
+
+          {/* Scroll row */}
+          <div className="relative">
+            <button
+              onClick={scrollLeft}
+              className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-2 z-10 w-8 h-8 bg-white shadow-md rounded-full flex items-center justify-center border border-gray-100 hover:bg-gray-50 transition-colors"
+            >
+              <ChevronLeft className="w-4 h-4 text-gray-600" />
+            </button>
+
+            <div
+              ref={scrollRef}
+              className="flex gap-3 overflow-x-auto pb-2 scroll-smooth no-scrollbar"
+            >
+              {newUsers.map(u => {
+                const photo = u.photos?.length > 0
+                  ? (u.photos[0].startsWith('http') ? u.photos[0] : `${BASE_URL}${u.photos[0]}`)
+                  : null;
+                const displayId = u.customId || u._id?.toString().slice(-6).toUpperCase();
+
+                return (
+                  <Link
+                    key={u._id}
+                    to={`/profiles/${u._id}`}
+                    className="flex-shrink-0 group"
+                  >
+                    {showPhotos ? (
+                      <div className="w-36 rounded-xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5">
+                        <div className="relative h-44 bg-gray-100">
+                          {photo ? (
+                            <img
+                              src={photo}
+                              alt={u.name}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                              onError={(e) => {
+                                e.target.onerror = null;
+                                e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(u.name || 'U')}&background=f1cdcd&color=8f2c2c&size=256&bold=true`;
+                              }}
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-primary-50">
+                              <span className="text-4xl font-bold text-primary-300">
+                                {(u.name || 'U')[0].toUpperCase()}
+                              </span>
+                            </div>
+                          )}
+                          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent px-2 py-2">
+                            <p className="text-white text-xs font-semibold truncate">{u.name}</p>
+                            <p className="text-white/70 text-[10px]">ID: {displayId}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="w-40 flex items-center gap-3 px-3 py-2.5 bg-gray-50 border border-gray-100 rounded-xl hover:bg-primary-50 hover:border-primary-100 transition-colors">
+                        <div className="w-9 h-9 rounded-full bg-primary-100 flex items-center justify-center flex-shrink-0">
+                          <span className="text-primary-700 font-bold text-sm">
+                            {(u.name || 'U')[0].toUpperCase()}
+                          </span>
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-gray-800 truncate">{u.name}</p>
+                          <p className="text-[10px] text-gray-400">ID: {displayId}</p>
+                        </div>
+                      </div>
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+
+            <button
+              onClick={scrollRight}
+              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-2 z-10 w-8 h-8 bg-white shadow-md rounded-full flex items-center justify-center border border-gray-100 hover:bg-gray-50 transition-colors"
+            >
+              <ChevronRight className="w-4 h-4 text-gray-600" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Main grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-8">

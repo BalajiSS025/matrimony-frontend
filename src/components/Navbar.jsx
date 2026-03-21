@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Heart, Menu, X, LayoutDashboard, Users, HeartHandshake, User, LogOut, ChevronRight, Settings, Moon, Sun } from 'lucide-react';
+import { Heart, Menu, X, LayoutDashboard, Users, HeartHandshake, User, LogOut, ChevronRight, Settings, Moon, Sun, MessageCircle } from 'lucide-react';
 import NotificationBell from './NotificationBell';
 
 const Navbar = () => {
@@ -68,6 +68,7 @@ const Navbar = () => {
     const authLinks = [
         { to: '/profiles', label: 'Browse', icon: Users },
         { to: '/matches', label: 'Matches', icon: HeartHandshake },
+        { to: '/chat', label: 'Messages', icon: MessageCircle },
         { to: '/interests/received', label: 'Interests', icon: Heart },
         { to: '/shortlisted', label: 'Shortlist', icon: Heart },
         { to: '/profile', label: 'Profile', icon: User },

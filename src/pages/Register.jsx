@@ -19,8 +19,33 @@ const Register = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  // Strict email validation — rejects user@7654, user@.com, etc.
+  const validateEmail = (email) => {
+    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+    return regex.test(email.trim());
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Validate name
+    if (formData.name.trim().length < 2) {
+      toast.error("Name must be at least 2 characters");
+      return;
+    }
+
+    // Validate email
+    if (!validateEmail(formData.email)) {
+      toast.error("Please enter a valid email address (e.g., name@gmail.com)");
+      return;
+    }
+
+    // Validate password
+    if (formData.password.length < 6) {
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
+
     if (formData.password !== formData.confirmPassword) {
       toast.error("Passwords do not match");
       return;
