@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import {
     MapPin, Briefcase, Heart, ShieldBan,
     GraduationCap, Users, Eye, CheckCircle,
-    Check, X
+    Check, X, Star
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { interestService } from '../services/interestService';
@@ -31,13 +31,82 @@ const Chip = ({ label }) => (
 );
 
 // ─── Main ProfileCard component ───────────────────────────────────────────────
-const ProfileCard = ({ profile, onRemove, interaction, onInteractionChange, isLiked, onLikeToggle }) => {
+const ProfileCard = ({ profile, onRemove, interaction, onInteractionChange, isLiked, onLikeToggle, kundaliScore, browseModeSimplified = false }) => {
     const [interestSent, setInterestSent] = useState(false);
     const [actionLoading, setActionLoading] = useState(false);
     const [likeLoading, setLikeLoading] = useState(false);
 
     // Guard: always render even if profile is empty
     if (!profile) return null;
+
+    // Simplified browse mode - show only photo with overlay
+    if (browseModeSimplified) {
+        const age = profile.age || calculateAge(profile.dateOfBirth);
+        const handleCardClick = () => {
+            window.location.href = `/profiles/${profile._id}`;
+        };
+
+        return (
+            <article
+                className="group relative h-96 rounded-2xl overflow-hidden shadow-soft hover:shadow-premium transition-all duration-300 cursor-pointer"
+                onClick={handleCardClick}
+            >
+                <img
+                    src={profile.photos?.length > 0
+                        ? (profile.photos[0].startsWith('http') ? profile.photos[0] : `${BASE_URL}${profile.photos[0]}`)
+                        : '/default-profile.png'
+                    }
+                    alt={profile.name || 'User'}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 pointer-events-none"
+                    onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.name || 'U')}&background=f1cdcd&color=8f2c2c&size=600&bold=true`;
+                    }}
+                />
+
+                {/* Dark overlay */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent pointer-events-none" />
+
+                {/* Like button - top right */}
+                <button
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        handleToggleLike(e);
+                    }}
+                    disabled={likeLoading}
+                    className="absolute top-3 right-3 p-2 bg-white/80 backdrop-blur-md rounded-full shadow hover:bg-white transition-all z-10"
+                    aria-label={isLiked ? "Remove from shortlist" : "Add to shortlist"}
+                >
+                    <Heart className={`w-5 h-5 transition-colors ${isLiked ? 'fill-red-500 text-red-500' : 'text-gray-700 hover:text-red-500'}`} />
+                </button>
+
+                {/* Profile info - bottom */}
+                <div className="absolute bottom-0 left-0 right-0 p-4 text-white pointer-events-none">
+                    <div className="flex items-end justify-between mb-2">
+                        <div>
+                            <h3 className="text-xl font-bold leading-tight">{profile.name}</h3>
+                            <p className="text-sm text-white/80">{age ? `${age} years` : 'Age N/A'}</p>
+                        </div>
+                        {kundaliScore && !kundaliScore.error && (
+                            <div className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full whitespace-nowrap ${
+                                kundaliScore.percentage >= 70
+                                    ? 'bg-green-500/80'
+                                    : kundaliScore.percentage >= 50
+                                    ? 'bg-yellow-500/80'
+                                    : 'bg-red-500/80'
+                            }`}>
+                                <Star className="w-3 h-3" />
+                                {(kundaliScore.percentage / 3.6).toFixed(1)}/10
+                            </div>
+                        )}
+                    </div>
+                    <p className="text-xs text-white/90 line-clamp-1">
+                        {profile.profession ? profile.profession : 'Profession N/A'}
+                    </p>
+                </div>
+            </article>
+        );
+    }
 
     const handleSendInterest = async (e) => {
         e.preventDefault();
@@ -208,9 +277,23 @@ const ProfileCard = ({ profile, onRemove, interaction, onInteractionChange, isLi
                     >
                         {safeField(profile.name, 'Unknown User')}
                     </Link>
-                    <span className="text-xs font-bold text-primary-600 bg-primary-50 px-2 py-1 rounded-full border border-primary-100 whitespace-nowrap flex-shrink-0">
-                        {ageText}
-                    </span>
+                    <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                        <span className="text-xs font-bold text-primary-600 bg-primary-50 px-2 py-1 rounded-full border border-primary-100 whitespace-nowrap">
+                            {ageText}
+                        </span>
+                        {kundaliScore && !kundaliScore.error && (
+                            <span className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap ${
+                                kundaliScore.percentage >= 70
+                                    ? 'bg-green-50 border border-green-200 text-green-700'
+                                    : kundaliScore.percentage >= 50
+                                    ? 'bg-yellow-50 border border-yellow-200 text-yellow-700'
+                                    : 'bg-red-50 border border-red-200 text-red-600'
+                            }`}>
+                                <Star className="w-2.5 h-2.5" />
+                                {(kundaliScore.percentage / 3.6).toFixed(1)}/10
+                            </span>
+                        )}
+                    </div>
                 </div>
 
                 {/* Gender + marital status */}
@@ -238,7 +321,7 @@ const ProfileCard = ({ profile, onRemove, interaction, onInteractionChange, isLi
                 </div>
 
                 {/* Bio excerpt */}
-                <p className="text-sm text-gray-500 italic border-l-2 border-primary-100 pl-3 mb-4 line-clamp-2">
+                <p className="text-sm text-gray-500 italic border-l-2 border-primary-100 pl-3 mb-3 line-clamp-2">
                     {displayBio}
                 </p>
 
@@ -253,9 +336,24 @@ const ProfileCard = ({ profile, onRemove, interaction, onInteractionChange, isLi
                     </Link>
 
                     {/* Interaction Buttons Logic */}
-                    {interaction?.status === 'accepted' || interaction?.status === 'rejected' ||
-                     (interaction?.type === 'sent' && interaction?.status === 'pending') || interestSent ? null
-                    : interaction?.type === 'received' && interaction?.status === 'pending' ? (
+                    {interaction?.status === 'accepted' ? (
+                        <span className="flex items-center gap-1 px-3 py-2 text-xs font-bold text-green-700 bg-green-50 border border-green-200 rounded-xl">
+                            <Check className="w-3.5 h-3.5" /> Accepted
+                        </span>
+                    ) : interaction?.status === 'rejected' ? (
+                        <button
+                            onClick={handleSendInterest}
+                            disabled={actionLoading}
+                            className="flex items-center justify-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-xl transition-all duration-200 bg-primary-600 text-white hover:bg-primary-700 shadow-sm hover:shadow-md disabled:opacity-60"
+                        >
+                            <Heart className="w-4 h-4" />
+                            {actionLoading ? 'Sending…' : 'Send Interest Again'}
+                        </button>
+                    ) : (interaction?.type === 'sent' && interaction?.status === 'pending') || interestSent ? (
+                        <span className="flex items-center gap-1 px-3 py-2 text-xs font-bold text-yellow-700 bg-yellow-50 border border-yellow-200 rounded-xl">
+                            <Heart className="w-3.5 h-3.5 fill-yellow-600" /> Pending
+                        </span>
+                    ) : interaction?.type === 'received' && interaction?.status === 'pending' ? (
                         <div className="flex-1 flex gap-2">
                             <button
                                 onClick={handleAcceptInterest}

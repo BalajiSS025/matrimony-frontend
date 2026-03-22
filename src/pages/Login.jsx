@@ -25,7 +25,14 @@ const Login = () => {
 
     if (response.success) {
       toast.success("Welcome back!");
-      navigate('/dashboard');
+      // Role-based redirect
+      if (response.user?.role === 'admin') {
+        navigate('/admin/dashboard');
+      } else if (!response.user?.isApproved) {
+        navigate('/pending-approval');
+      } else {
+        navigate('/dashboard');
+      }
     } else {
       toast.error(response.message);
     }

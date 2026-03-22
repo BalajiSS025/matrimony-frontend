@@ -115,6 +115,7 @@ const Matches = () => {
                   <ProfileCard
                     profile={match}
                     onRemove={handleRemoveProfile}
+                    interaction={{ type: 'sent', status: 'accepted' }}
                   />
                   <Link
                     to={`/chat/${match._id}`}

@@ -3,11 +3,32 @@ import { Link } from 'react-router-dom';
 import { userService } from '../services/userService';
 import {
     Settings as SettingsIcon, ShieldBan, UserCheck, RefreshCw,
-    MapPin, Briefcase, ChevronRight, Bell, Lock, User, Sliders
+    MapPin, Briefcase, ChevronRight, Bell, Lock, User, Eye,
+    EyeOff, BellOff, BellRing, Shield
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+// ── Toggle switch ─────────────────────────────────────────────────────────────
+const Toggle = ({ checked, onChange, disabled }) => (
+    <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        onClick={() => !disabled && onChange(!checked)}
+        disabled={disabled}
+        className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none ${
+            checked ? 'bg-primary-600' : 'bg-gray-300'
+        } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+    >
+        <span
+            className={`inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ${
+                checked ? 'translate-x-5' : 'translate-x-0'
+            }`}
+        />
+    </button>
+);
 
 // ── Loading skeleton ──────────────────────────────────────────────────────────
 const SkeletonRow = () => (
@@ -34,6 +55,27 @@ const SectionCard = ({ title, icon: Icon, children }) => (
     </div>
 );
 
+// ── Toggle row ────────────────────────────────────────────────────────────────
+const ToggleRow = ({ icon: Icon, label, description, checked, onChange, saving }) => (
+    <div className="flex items-center justify-between gap-4 px-5 sm:px-6 py-4 hover:bg-gray-50 transition-colors">
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+            <div className="w-9 h-9 rounded-xl bg-gray-100 flex items-center justify-center flex-shrink-0">
+                <Icon className="w-4 h-4 text-gray-600" />
+            </div>
+            <div className="min-w-0">
+                <p className="text-sm font-semibold text-gray-800">{label}</p>
+                {description && <p className="text-xs text-gray-500 mt-0.5">{description}</p>}
+            </div>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+            {saving && (
+                <span className="w-3.5 h-3.5 border-2 border-primary-400 border-t-transparent rounded-full animate-spin" />
+            )}
+            <Toggle checked={checked} onChange={onChange} disabled={saving} />
+        </div>
+    </div>
+);
+
 // ── Settings Menu Item ────────────────────────────────────────────────────────
 const MenuItem = ({ icon: Icon, label, description, to, onClick, danger = false }) => {
     const content = (
@@ -57,11 +99,62 @@ const MenuItem = ({ icon: Icon, label, description, to, onClick, danger = false 
 // ── Main Settings Page ────────────────────────────────────────────────────────
 const Settings = () => {
     const [blockedUsers, setBlockedUsers] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [loadingBlocked, setLoadingBlocked] = useState(true);
     const [unblocking, setUnblocking] = useState({});
 
+    // Privacy & notification settings
+    const [profileVisible, setProfileVisible] = useState(true);
+    const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+    const [savingVisibility, setSavingVisibility] = useState(false);
+    const [savingNotif, setSavingNotif] = useState(false);
+    const [loadingPrefs, setLoadingPrefs] = useState(true);
+
+    // Load current user prefs on mount
+    useEffect(() => {
+        const loadPrefs = async () => {
+            try {
+                const me = await userService.getMe();
+                setProfileVisible(me.profileVisibility !== false);
+                setNotificationsEnabled(me.notificationsEnabled !== false);
+            } catch {
+                // silently ignore
+            } finally {
+                setLoadingPrefs(false);
+            }
+        };
+        loadPrefs();
+    }, []);
+
+    const handleVisibilityChange = async (val) => {
+        setProfileVisible(val);
+        setSavingVisibility(true);
+        try {
+            await userService.updateProfile({ profileVisibility: val });
+            toast.success(val ? 'Profile is now visible to others' : 'Profile hidden from browse & search');
+        } catch {
+            setProfileVisible(!val); // revert on error
+            toast.error('Failed to update profile visibility');
+        } finally {
+            setSavingVisibility(false);
+        }
+    };
+
+    const handleNotifChange = async (val) => {
+        setNotificationsEnabled(val);
+        setSavingNotif(true);
+        try {
+            await userService.updateProfile({ notificationsEnabled: val });
+            toast.success(val ? 'Notifications enabled' : 'Notifications turned off');
+        } catch {
+            setNotificationsEnabled(!val); // revert on error
+            toast.error('Failed to update notification preferences');
+        } finally {
+            setSavingNotif(false);
+        }
+    };
+
     const fetchBlocked = useCallback(async () => {
-        setLoading(true);
+        setLoadingBlocked(true);
         try {
             const data = await userService.getBlockedUsers();
             const list = data?.data?.blockedUsers
@@ -74,7 +167,7 @@ const Settings = () => {
                 toast.error('Failed to load blocked users.');
             }
         } finally {
-            setLoading(false);
+            setLoadingBlocked(false);
         }
     }, []);
 
@@ -122,25 +215,53 @@ const Settings = () => {
                                 description="Update your personal information and photos"
                                 to="/profile"
                             />
-                            <MenuItem
-                                icon={Bell}
-                                label="Notifications"
-                                description="Manage your notification preferences"
-                                to="/dashboard"
-                            />
                         </div>
                     </SectionCard>
 
                     {/* Privacy Section */}
                     <SectionCard title="Privacy" icon={Lock}>
-                        <div className="divide-y divide-gray-50">
-                            <MenuItem
-                                icon={Sliders}
-                                label="Profile Visibility"
-                                description="Control who can see your profile"
-                                to="/profile"
-                            />
-                        </div>
+                        {loadingPrefs ? (
+                            <div className="px-5 py-4 flex items-center gap-3">
+                                <div className="w-4 h-4 border-2 border-primary-400 border-t-transparent rounded-full animate-spin" />
+                                <span className="text-sm text-gray-400">Loading preferences…</span>
+                            </div>
+                        ) : (
+                            <div className="divide-y divide-gray-50">
+                                <ToggleRow
+                                    icon={profileVisible ? Eye : EyeOff}
+                                    label="Profile Visibility"
+                                    description={profileVisible
+                                        ? 'Your profile is visible in browse and search results'
+                                        : 'Your profile is hidden from browse and search results'}
+                                    checked={profileVisible}
+                                    onChange={handleVisibilityChange}
+                                    saving={savingVisibility}
+                                />
+                            </div>
+                        )}
+                    </SectionCard>
+
+                    {/* Notifications Section */}
+                    <SectionCard title="Notifications" icon={Bell}>
+                        {loadingPrefs ? (
+                            <div className="px-5 py-4 flex items-center gap-3">
+                                <div className="w-4 h-4 border-2 border-primary-400 border-t-transparent rounded-full animate-spin" />
+                                <span className="text-sm text-gray-400">Loading preferences…</span>
+                            </div>
+                        ) : (
+                            <div className="divide-y divide-gray-50">
+                                <ToggleRow
+                                    icon={notificationsEnabled ? BellRing : BellOff}
+                                    label="In-app Notifications"
+                                    description={notificationsEnabled
+                                        ? 'You will receive notifications for interests, matches and messages'
+                                        : 'All in-app notifications are turned off'}
+                                    checked={notificationsEnabled}
+                                    onChange={handleNotifChange}
+                                    saving={savingNotif}
+                                />
+                            </div>
+                        )}
                     </SectionCard>
 
                     {/* Blocked Users Section */}
@@ -148,7 +269,7 @@ const Settings = () => {
                         {/* Card header */}
                         <div className="flex items-center justify-between px-5 sm:px-6 py-3 bg-gray-50/50 border-b border-gray-100">
                             <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                                {loading ? 'Loading…' : `${blockedUsers.length} blocked user${blockedUsers.length !== 1 ? 's' : ''}`}
+                                {loadingBlocked ? 'Loading…' : `${blockedUsers.length} blocked user${blockedUsers.length !== 1 ? 's' : ''}`}
                             </span>
                             <button
                                 onClick={fetchBlocked}
@@ -159,7 +280,7 @@ const Settings = () => {
                         </div>
 
                         {/* List */}
-                        {loading ? (
+                        {loadingBlocked ? (
                             <div className="p-4 sm:p-5 space-y-3">
                                 {[1, 2, 3].map(i => <SkeletonRow key={i} />)}
                             </div>
@@ -250,6 +371,18 @@ const Settings = () => {
                             <p className="text-xs text-gray-400 text-center">
                                 Unblocking allows them to view your profile and send interests again.
                             </p>
+                        </div>
+                    </SectionCard>
+
+                    {/* Security Section */}
+                    <SectionCard title="Security" icon={Shield}>
+                        <div className="divide-y divide-gray-50">
+                            <MenuItem
+                                icon={Lock}
+                                label="Change Password"
+                                description="Update your account password"
+                                to="/profile"
+                            />
                         </div>
                     </SectionCard>
                 </div>

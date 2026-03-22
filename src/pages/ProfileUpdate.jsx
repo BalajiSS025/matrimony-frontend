@@ -62,6 +62,7 @@ const ToggleField = ({ label, name, checked, onChange }) => (
 const ProfileUpdate = () => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true);
   const [photos, setPhotos] = useState([]);
   const [existingPhotos, setExistingPhotos] = useState([]);
   const [horoscope, setHoroscope] = useState(null);
@@ -90,6 +91,7 @@ const ProfileUpdate = () => {
 
   useEffect(() => {
     const fetchProfile = async () => {
+      setPageLoading(true);
       try {
         const response = await userService.getMe();
         if (response) {
@@ -138,6 +140,9 @@ const ProfileUpdate = () => {
         }
       } catch (error) {
         console.error('Error fetching profile', error);
+        toast.error('Failed to load profile data');
+      } finally {
+        setPageLoading(false);
       }
     };
     fetchProfile();
@@ -167,8 +172,17 @@ const ProfileUpdate = () => {
     }
   };
 
-  const handleDeleteExistingPhoto = (photo) => {
-    setExistingPhotos(prev => prev.filter(p => p !== photo));
+  const handleDeleteExistingPhoto = async (photo) => {
+    if (!window.confirm('Delete this photo? This cannot be undone.')) return;
+    try {
+      const result = await userService.deletePhoto(photo);
+      setExistingPhotos(result.photos || (prev => prev.filter(p => p !== photo)));
+      toast.success('Photo deleted');
+    } catch {
+      // Optimistically remove from UI even if API fails (local-only fallback)
+      setExistingPhotos(prev => prev.filter(p => p !== photo));
+      toast.error('Failed to delete from server — removed locally');
+    }
   };
 
   const handlePhotoChange = (e) => {
@@ -204,6 +218,19 @@ const ProfileUpdate = () => {
   };
 
   const getPhotoSrc = (photo) => photo?.startsWith('http') ? photo : `${BASE_URL}${photo}`;
+
+  if (pageLoading) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+        <div className="bg-white rounded-3xl p-8 shadow-soft border border-gray-100 flex items-center justify-center h-96">
+          <div className="text-center">
+            <div className="w-12 h-12 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin mx-auto mb-4" />
+            <p className="text-gray-600 font-medium">Loading your profile...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">

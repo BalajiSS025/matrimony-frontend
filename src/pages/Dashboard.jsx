@@ -45,8 +45,16 @@ const Dashboard = () => {
     }
   };
 
-  const scrollLeft = () => scrollRef.current?.scrollBy({ left: -240, behavior: 'smooth' });
-  const scrollRight = () => scrollRef.current?.scrollBy({ left: 240, behavior: 'smooth' });
+  const scrollLeft = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollBy({ left: -el.offsetWidth, behavior: 'smooth' });
+  };
+  const scrollRight = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollBy({ left: el.offsetWidth, behavior: 'smooth' });
+  };
 
   const completionPercentage = stats.profileCompletion || 0;
 
@@ -170,18 +178,19 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* Scroll row */}
+          {/* Snap-scroll carousel — one card fully visible at a time */}
           <div className="relative">
             <button
               onClick={scrollLeft}
-              className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-2 z-10 w-8 h-8 bg-white shadow-md rounded-full flex items-center justify-center border border-gray-100 hover:bg-gray-50 transition-colors"
+              className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-3 z-10 w-9 h-9 bg-white shadow-lg rounded-full flex items-center justify-center border border-gray-100 hover:bg-gray-50 transition-colors"
             >
-              <ChevronLeft className="w-4 h-4 text-gray-600" />
+              <ChevronLeft className="w-5 h-5 text-gray-600" />
             </button>
 
             <div
               ref={scrollRef}
-              className="flex gap-3 overflow-x-auto pb-2 scroll-smooth no-scrollbar"
+              className="flex overflow-x-auto pb-1 no-scrollbar"
+              style={{ scrollSnapType: 'x mandatory', gap: '12px' }}
             >
               {newUsers.map(u => {
                 const photo = u.photos?.length > 0
@@ -193,45 +202,53 @@ const Dashboard = () => {
                   <Link
                     key={u._id}
                     to={`/profiles/${u._id}`}
-                    className="flex-shrink-0 group"
+                    className="group flex-shrink-0"
+                    style={{ scrollSnapAlign: 'start', width: '45%', minWidth: '45%' }}
                   >
                     {showPhotos ? (
-                      <div className="w-36 rounded-xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5">
-                        <div className="relative h-44 bg-gray-100">
+                      /* Full-width photo card — one per snap, portrait aspect */
+                      <div className="rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-md transition-all w-full bg-gray-100">
+                        <div className="relative w-full" style={{ paddingBottom: '60%' }}>
                           {photo ? (
                             <img
                               src={photo}
                               alt={u.name}
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                              className="absolute inset-0 w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500"
                               onError={(e) => {
                                 e.target.onerror = null;
-                                e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(u.name || 'U')}&background=f1cdcd&color=8f2c2c&size=256&bold=true`;
+                                e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(u.name || 'U')}&background=f1cdcd&color=8f2c2c&size=600&bold=true`;
                               }}
                             />
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center bg-primary-50">
-                              <span className="text-4xl font-bold text-primary-300">
+                            <div className="absolute inset-0 flex items-center justify-center bg-primary-50">
+                              <span className="text-8xl font-bold text-primary-200">
                                 {(u.name || 'U')[0].toUpperCase()}
                               </span>
                             </div>
                           )}
-                          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent px-2 py-2">
-                            <p className="text-white text-xs font-semibold truncate">{u.name}</p>
-                            <p className="text-white/70 text-[10px]">ID: {displayId}</p>
+                          {/* Gradient overlay + name */}
+                          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent px-4 py-4">
+                            <p className="text-white text-base font-bold truncate">{u.name}</p>
+                            <p className="text-white/60 text-xs mt-0.5">ID: {displayId}</p>
                           </div>
                         </div>
                       </div>
                     ) : (
-                      <div className="w-40 flex items-center gap-3 px-3 py-2.5 bg-gray-50 border border-gray-100 rounded-xl hover:bg-primary-50 hover:border-primary-100 transition-colors">
-                        <div className="w-9 h-9 rounded-full bg-primary-100 flex items-center justify-center flex-shrink-0">
-                          <span className="text-primary-700 font-bold text-sm">
-                            {(u.name || 'U')[0].toUpperCase()}
-                          </span>
+                      /* List card — full-width, one per snap */
+                      <div className="w-full flex items-center gap-4 px-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl hover:bg-primary-50 hover:border-primary-100 transition-colors">
+                        <div className="w-14 h-14 rounded-full bg-primary-100 flex items-center justify-center flex-shrink-0 overflow-hidden border-2 border-white shadow">
+                          {photo ? (
+                            <img src={photo} alt={u.name} className="w-full h-full object-cover"
+                              onError={e => { e.target.onerror = null; e.target.style.display = 'none'; }} />
+                          ) : (
+                            <span className="text-primary-700 font-bold text-xl">{(u.name || 'U')[0].toUpperCase()}</span>
+                          )}
                         </div>
                         <div className="min-w-0">
-                          <p className="text-sm font-semibold text-gray-800 truncate">{u.name}</p>
-                          <p className="text-[10px] text-gray-400">ID: {displayId}</p>
+                          <p className="text-base font-bold text-gray-800 truncate">{u.name}</p>
+                          <p className="text-xs text-gray-400 mt-0.5">ID: {displayId}</p>
                         </div>
+                        <ChevronRight className="w-5 h-5 text-gray-300 ml-auto flex-shrink-0" />
                       </div>
                     )}
                   </Link>
@@ -241,9 +258,9 @@ const Dashboard = () => {
 
             <button
               onClick={scrollRight}
-              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-2 z-10 w-8 h-8 bg-white shadow-md rounded-full flex items-center justify-center border border-gray-100 hover:bg-gray-50 transition-colors"
+              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-3 z-10 w-9 h-9 bg-white shadow-lg rounded-full flex items-center justify-center border border-gray-100 hover:bg-gray-50 transition-colors"
             >
-              <ChevronRight className="w-4 h-4 text-gray-600" />
+              <ChevronRight className="w-5 h-5 text-gray-600" />
             </button>
           </div>
         </div>

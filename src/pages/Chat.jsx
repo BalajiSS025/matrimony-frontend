@@ -178,7 +178,7 @@ const Chat = () => {
         return () => leaveConversation(selectedConv._id);
     }, [selectedConv?._id]);
 
-    // Socket: new message
+    // Socket: new message — sole source of truth for appending messages
     useEffect(() => {
         const cleanup = onNewMessage((msg) => {
             if (msg.conversation === selectedConv?._id) {
@@ -225,14 +225,10 @@ const Chat = () => {
         setSending(true);
 
         try {
-            const msg = await chatService.sendMessage(selectedConv._id, msgText);
-            setMessages(prev => [...prev, msg]);
-            setConversations(prev =>
-                prev.map(c => c._id === selectedConv._id
-                    ? { ...c, lastMessage: msg, lastMessageAt: msg.createdAt }
-                    : c
-                )
-            );
+            // Don't add to messages here — the socket will echo it back to the sender
+            // (sender is in the conversation room) and the onNewMessage handler will add it.
+            // This prevents the double-message bug on the sender's end.
+            await chatService.sendMessage(selectedConv._id, msgText);
         } catch (err) {
             toast.error(err.response?.data?.message || 'Failed to send message');
             setText(msgText); // Restore text on failure

@@ -5,7 +5,7 @@ import { Heart, Menu, X, LayoutDashboard, Users, HeartHandshake, User, LogOut, C
 import NotificationBell from './NotificationBell';
 
 const Navbar = () => {
-    const { token, logout } = useAuth();
+    const { token, user, logout } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
     const [mobileOpen, setMobileOpen] = useState(false);
@@ -84,7 +84,7 @@ const Navbar = () => {
 
                         {/* Logo */}
                         <Link
-                            to={token ? '/dashboard' : '/'}
+                            to={token ? (user?.role === 'admin' ? '/admin/dashboard' : '/dashboard') : '/'}
                             className="flex items-center space-x-2 flex-shrink-0"
                         >
                             <div className="bg-primary-600 p-2 rounded-full flex items-center justify-center">
@@ -99,15 +99,20 @@ const Navbar = () => {
                         <div className="hidden md:flex items-center space-x-5 font-medium">
                             {token ? (
                                 <>
-                                    {authLinks.map(({ to, label }) => (
+                                    {user?.role !== 'admin' && authLinks.map(({ to, label }) => (
                                         <Link key={to} to={to} className={navLinkClass(to)}>
                                             {label}
                                         </Link>
                                     ))}
+                                    {user?.role === 'admin' && (
+                                        <Link to="/admin/dashboard" className={navLinkClass('/admin/dashboard')}>
+                                            Admin Dashboard
+                                        </Link>
+                                    )}
                                     <button onClick={toggleTheme} className="p-2 rounded-full text-gray-500 hover:bg-gray-100 transition-colors">
                                         {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
                                     </button>
-                                    <NotificationBell />
+                                    {user?.role !== 'admin' && <NotificationBell />}
                                     <button
                                         onClick={handleLogout}
                                         className="ml-2 bg-gray-100 hover:bg-red-50 hover:text-red-600 text-gray-700 text-sm px-4 py-2 rounded-full transition-all font-semibold border border-gray-200 hover:border-red-200 flex items-center gap-1.5"
@@ -176,23 +181,39 @@ const Navbar = () => {
                         {/* Nav links */}
                         <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
                             {token ? (
-                                // eslint-disable-next-line no-unused-vars
-                                authLinks.map(({ to, label, icon: IconComponent }) => (
+                                user?.role === 'admin' ? (
                                     <Link
-                                        key={to}
-                                        to={to}
-                                        className={`flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-colors ${isActive(to)
+                                        to="/admin/dashboard"
+                                        className={`flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-colors ${isActive('/admin/dashboard')
                                             ? 'bg-primary-50 text-primary-700 font-bold'
                                             : 'text-gray-700 hover:bg-gray-50'
                                             }`}
                                     >
                                         <div className="flex items-center gap-3">
-                                            <IconComponent className={`w-5 h-5 ${isActive(to) ? 'text-primary-600' : 'text-gray-400'}`} />
-                                            {label}
+                                            <LayoutDashboard className={`w-5 h-5 ${isActive('/admin/dashboard') ? 'text-primary-600' : 'text-gray-400'}`} />
+                                            Admin Dashboard
                                         </div>
                                         <ChevronRight className="w-4 h-4 text-gray-300" />
                                     </Link>
-                                ))
+                                ) : (
+                                    // eslint-disable-next-line no-unused-vars
+                                    authLinks.map(({ to, label, icon: IconComponent }) => (
+                                        <Link
+                                            key={to}
+                                            to={to}
+                                            className={`flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-colors ${isActive(to)
+                                                ? 'bg-primary-50 text-primary-700 font-bold'
+                                                : 'text-gray-700 hover:bg-gray-50'
+                                                }`}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <IconComponent className={`w-5 h-5 ${isActive(to) ? 'text-primary-600' : 'text-gray-400'}`} />
+                                                {label}
+                                            </div>
+                                            <ChevronRight className="w-4 h-4 text-gray-300" />
+                                        </Link>
+                                    ))
+                                )
                             ) : (
                                 <>
                                     <Link

@@ -77,4 +77,9 @@ export const userService = {
         const response = await api.post('/reports', { reportedUserId, reason, details });
         return response.data;
     },
+
+    deletePhoto: async (photoUrl) => {
+        const response = await api.delete('/users/photos', { data: { photoUrl } });
+        return response.data;
+    },
 };
